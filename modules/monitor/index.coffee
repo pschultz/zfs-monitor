@@ -1,4 +1,5 @@
 events = require 'events'
+eyes = require 'eyes'
 
 Query = require '../query'
 
@@ -39,6 +40,41 @@ class Monitor extends events.EventEmitter
     @emit.apply @, args
 
   analyseResult: (result) ->
+    return unless @lastStatus?
+
+    @checkForMissingElements result
+    @checkForAddedElements result, ->
+      @_emit 'foo'
+
+  checkForMissingElements: (result) ->
+    @diffPools @lastStatus[1..1], result[1..1], 'removed'
+
+  checkForAddedElements: (result, cb) ->
+    @diffPools result[1..1], @lastStatus[1..1], 'added', cb
+
+  diffPools: (lhsPools, rhsPools, type, cb = ->) ->
+    @diffSomething lhsPools, rhsPools, 'pool', type, (lhs, rhs) ->
+      @diffSomething lhs.filesystems, rhs.filesystems, 'zfs',       type
+      @diffSomething lhs.diskArrays,  rhs.diskArrays,  'diskarray', type, (lhs, rhs) ->
+        @diffSomething lhs.disks, rhs.disks, 'disk', type
+
+
+  diffSomething: (lhsSth, rhsSth, sthType, changeType, next = ->) ->
+    for lhs in lhsSth
+      lhsChanged = true
+      for rhs in rhsSth
+        if lhs.id == rhs.id
+          nextRhs = rhs
+          lhsChanged = false
+
+      if lhsChanged
+        @_emit [sthType,   lhs.id, changeType].join(':'), lhs
+        @_emit [sthType, lhs.name, changeType].join(':'), lhs if(lhs.name?)
+        @_emit [sthType,      '*', changeType].join(':'), lhs
+
+      else
+        next.call @, lhs, nextRhs
+      
 
 
 module.exports = exports = new Monitor()
