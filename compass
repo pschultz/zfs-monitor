@@ -1,3 +1,0 @@
-#!/usr/bin/env sh
-
-compass watch --sass-dir src/public/stylesheets --css-dir public/stylesheets/
