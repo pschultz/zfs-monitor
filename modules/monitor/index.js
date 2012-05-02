@@ -12,6 +12,7 @@ Monitor = (function(_super) {
   __extends(Monitor, _super);
 
   function Monitor() {
+    this._emit = __bind(this._emit, this);
     this.onQueryComplete = __bind(this.onQueryComplete, this);    this.lastStatus = null;
     this.interval = 0;
     this.query = new Query();
@@ -44,7 +45,13 @@ Monitor = (function(_super) {
     return this.emit('complete', result);
   };
 
-  Monitor.prototype.analyseResult = function(result) {};
+  Monitor.prototype._emit = function() {
+    var args;
+    this.emit.apply(this, arguments);
+    args = Array.prototype.slice.call(arguments);
+    args.unshift('*');
+    return this.emit.apply(this, args);
+  };
 
   return Monitor;
 

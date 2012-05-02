@@ -32,6 +32,12 @@ class Monitor extends events.EventEmitter
     @lastStatus = result
     @emit 'complete', result
 
+  _emit: =>
+    @emit.apply @, arguments
+    args = Array::slice.call arguments
+    args.unshift '*'
+    @emit.apply @, args
+
   analyseResult: (result) ->
 
 

@@ -3,7 +3,8 @@ Monitor = require './modules/monitor'
 
 
 #Monitor.getSnapshot (result) ->
-Monitor.on 'complete', (result) ->
-  eyes.inspect r for r in result
+Monitor.on '*', ->
+  eyes.inspect arguments[0]
+  #eyes.inspect r for r in result
 
 Monitor.startMonitoring()
