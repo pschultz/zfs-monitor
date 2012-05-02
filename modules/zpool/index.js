@@ -21,6 +21,10 @@ ZPool = (function() {
     return this.scans.push(scan);
   };
 
+  ZPool.prototype.addFilesystem = function(fs) {
+    return this.filesystems.push(fs);
+  };
+
   return ZPool;
 
 })();

@@ -14,5 +14,8 @@ class ZPool
   addScan: (scan) ->
     @scans.push scan
 
+  addFilesystem: (fs) ->
+    @filesystems.push fs
+
 
 module.exports = exports = ZPool

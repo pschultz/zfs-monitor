@@ -1,4 +1,4 @@
-var Filesystem, Pool, PoolParser, Query, cproc, events, exports, path,
+var Pool, PoolParser, Query, ZfsParser, cproc, events, exports, path,
   __hasProp = Object.prototype.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
@@ -10,21 +10,9 @@ events = require('events');
 
 Pool = require('../zpool');
 
-Filesystem = require('../zpool/filesystem');
-
 PoolParser = require('./parser/zpool');
 
-/*
-normalizeBytes = (input) ->
-  for suffix, e in [ '', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y' ]
-    pattern = new RegExp("^([+-]?[\\d.]+)#{suffix}$", 'i')
-
-    if pattern.test input
-      [ nil, numeric ] = pattern.exec input
-      return Math.round(numeric * Math.pow(1024, e))
-
-  return 0
-*/
+ZfsParser = require('./parser/zfs');
 
 Query = (function(_super) {
 
@@ -69,7 +57,11 @@ Query = (function(_super) {
     self = this;
     self.queryZpool(function() {
       return self.parseZpools(function() {
-        return self.emit('complete', self.zpools);
+        return self.queryZfs(function() {
+          return self.parseFilesystems(function() {
+            return self.emit('complete', self.zpools);
+          });
+        });
       });
     });
     return null;
@@ -151,30 +143,31 @@ Query = (function(_super) {
   };
 
   Query.prototype.parseFilesystems = function(cb) {
-    var fsName, lastPoolName, line, lines, nil, poolLines, poolName, _i, _len, _ref;
-    lines = this.zpoolStatusOutput.split("\n");
-    poolLines = [];
+    var fsName, lastPoolName, line, lines, poolLines, poolName, _i, _len;
+    lines = this.zfsStatusOutput.split("\n");
+    lines.shift();
+    poolLines = {};
     poolName = 'unnamed';
-    lastPoolName = 'unnamed';
-    lastPoolname;
+    lastPoolName = null;
     for (_i = 0, _len = lines.length; _i < _len; _i++) {
       line = lines[_i];
       fsName = line.split(/\s+/)[0];
-      [poolName](fsName.split('/'));
-      if (poolName !== lastPoolName) {
-        if (poolLines.length) this.parseFilesystem(poolName, poolLines);
-        poolLines = [];
-        _ref = newPoolPattern.exec(line), nil = _ref[0], poolName = _ref[1];
-      }
+      poolName = fsName.split('/')[0];
+      if (!poolLines[poolName]) poolLines[poolName] = [];
+      poolLines[poolName].push(line);
     }
-    return this.parseZpool(poolName, poolLines);
+    for (poolName in poolLines) {
+      lines = poolLines[poolName];
+      this.parseFilesystem(poolName, lines);
+    }
+    return cb();
   };
 
   Query.prototype.parseFilesystem = function(poolName, lines) {
-    var pool;
-    pool = this.getPoolByName();
+    var parser, pool;
+    pool = this.getPoolByName(poolName);
     if (pool == null) return;
-    parser(new ZfsParser(pool));
+    parser = new ZfsParser(pool);
     return parser.parse(lines);
   };
 

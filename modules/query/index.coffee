@@ -3,21 +3,9 @@ path = require 'path'
 events = require 'events'
 
 Pool = require '../zpool'
-Filesystem = require '../zpool/filesystem'
-
 PoolParser = require './parser/zpool'
+ZfsParser = require './parser/zfs'
 
-###
-normalizeBytes = (input) ->
-  for suffix, e in [ '', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y' ]
-    pattern = new RegExp("^([+-]?[\\d.]+)#{suffix}$", 'i')
-
-    if pattern.test input
-      [ nil, numeric ] = pattern.exec input
-      return Math.round(numeric * Math.pow(1024, e))
-
-  return 0
-###
 
 class Query extends events.EventEmitter
   constructor: ->
@@ -39,8 +27,8 @@ class Query extends events.EventEmitter
 
     self.queryZpool ->
       self.parseZpools ->
-        #self.queryZfs ->
-          #self.parseFilesystems ->
+        self.queryZfs ->
+          self.parseFilesystems ->
             self.emit 'complete', self.zpools
 
     null
@@ -111,31 +99,30 @@ class Query extends events.EventEmitter
       else self.query()
 
   parseFilesystems: (cb) ->
-    lines = @zpoolStatusOutput.split "\n"
-    poolLines = []
+    lines = @zfsStatusOutput.split "\n"
+    lines.shift()
+    poolLines = {}
     poolName = 'unnamed'
-    lastPoolName = 'unnamed'
+    lastPoolName = null
 
-    lastPoolname
     for line in lines
-      [ fsName ] = line.split /\s+/
-      [ poolName ] fsName.split '/'
+      [ fsName ]   = line  .split /\s+/
+      [ poolName ] = fsName.split '/'
 
-      if poolName isnt lastPoolName
-        if poolLines.length
-          @parseFilesystem poolName, poolLines
+      poolLines[poolName] = [] unless poolLines[poolName]
+      poolLines[poolName].push line
 
-        poolLines = []
-        [ nil, poolName ] = newPoolPattern.exec line
+    for poolName, lines of poolLines
+      @parseFilesystem poolName, lines
 
-    @parseZpool poolName, poolLines
+    cb()
 
   parseFilesystem: (poolName, lines) ->
-    pool = @getPoolByName()
+    pool = @getPoolByName poolName
 
     return unless pool?
 
-    parser new ZfsParser pool
+    parser = new ZfsParser pool
     parser.parse lines
 
   getPoolByName: (name) ->

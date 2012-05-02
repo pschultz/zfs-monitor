@@ -32,13 +32,13 @@ config:
 
 errors: No known data errors
 
-  pool: r1
+  pool: rpool
  state: ONLINE
   scan: none requested
 config:
 
         NAME             STATE     READ WRITE CKSUM
-        r1               ONLINE       0     0     0
+        rpool            ONLINE       0     0     0
           /dev/lofi/1    ONLINE       0     0     0
           /dev/lofi/2    ONLINE       0     0     0
           raidz1-2       ONLINE       0     0     0

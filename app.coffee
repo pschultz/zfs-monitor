@@ -4,6 +4,6 @@ Monitor = require './modules/monitor'
 Monitor.subscribeForPool 'tank'
 
 Monitor.getSnapshot (result) ->
-  eyes.inspect result
+  eyes.inspect r for r in result
 
 Monitor.unsubscribeFromPool 'tank'
