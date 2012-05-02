@@ -1,6 +1,8 @@
+events = require 'events'
+
 Query = require '../query'
 
-class Monitor
+class Monitor extends events.EventEmitter
   constructor: ->
     @lastStatus = null
     @interval = 0
@@ -9,8 +11,9 @@ class Monitor
     @query.on 'complete', @onQueryComplete
 
   startMonitoring: ->
+    self = @
     @interval = setInterval ->
-      query.execute()
+      self.query.execute()
     , 2000
 
   stopMonitoring: ->
@@ -34,6 +37,7 @@ class Monitor
   onQueryComplete: (result) =>
     @analyseResult result
     @lastStatus = result
+    @emit 'complete', result
 
   analyseResult: (result) ->
 
