@@ -7,6 +7,7 @@ Diskarray = require '../../zpool/array'
 
 class PoolParser
   constructor: (@pool) ->
+    @stripeIndex = 0
 
   parse: (lines) ->
     for i in [0..lines.length - 1]
@@ -95,7 +96,7 @@ class PoolParser
     return i
 
   addDiskarray: (name, type, status = '') ->
-    name = if type == 'striped' then '' else name
+    name = if type == 'striped' then "striped-#{@stripeIndex++}" else name
     diskArray = new Diskarray name, type, status
 
     @pool.addDiskarray diskArray

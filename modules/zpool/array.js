@@ -7,6 +7,7 @@ Diskarray = (function() {
     this.type = type != null ? type : 'striped';
     this.status = status != null ? status : '';
     this.disks = [];
+    this.id = require('crypto').createHash('md5').update(this.name).digest('hex');
   }
 
   return Diskarray;

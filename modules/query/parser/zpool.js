@@ -14,6 +14,7 @@ PoolParser = (function() {
 
   function PoolParser(pool) {
     this.pool = pool;
+    this.stripeIndex = 0;
   }
 
   PoolParser.prototype.parse = function(lines) {
@@ -98,7 +99,7 @@ PoolParser = (function() {
   PoolParser.prototype.addDiskarray = function(name, type, status) {
     var diskArray;
     if (status == null) status = '';
-    name = type === 'striped' ? '' : name;
+    name = type === 'striped' ? "striped-" + (this.stripeIndex++) : name;
     diskArray = new Diskarray(name, type, status);
     this.pool.addDiskarray(diskArray);
     return diskArray;
