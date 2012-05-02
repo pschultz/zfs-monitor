@@ -30,21 +30,12 @@ Monitor = (function(_super) {
     if (this.interval) return clearInterval(this.interval);
   };
 
-  Monitor.prototype.subscribeForPool = function(pool) {
-    return this.query.addPool(pool);
-  };
-
   Monitor.prototype.getSnapshot = function(cb) {
     if (this.lastStatus != null) return cb(this.lastStatus);
     this.query.once('complete', function(result) {
       return cb(result);
     });
     return this.query.execute();
-  };
-
-  Monitor.prototype.unsubscribeFromPool = function(pool) {
-    this.query.removePool(pool);
-    if (!(this.query.getNumberOfPools > 0)) return this.stopMonitoring;
   };
 
   Monitor.prototype.onQueryComplete = function(result) {

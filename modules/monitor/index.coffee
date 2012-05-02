@@ -19,9 +19,6 @@ class Monitor extends events.EventEmitter
   stopMonitoring: ->
     clearInterval @interval if @interval
 
-  subscribeForPool: (pool) ->
-    @query.addPool pool
-
   getSnapshot: (cb) ->
     return cb @lastStatus  if @lastStatus?
 
@@ -29,10 +26,6 @@ class Monitor extends events.EventEmitter
       cb result
 
     @query.execute()
-
-  unsubscribeFromPool: (pool) ->
-    @query.removePool pool
-    @stopMonitoring unless @query.getNumberOfPools > 0
 
   onQueryComplete: (result) =>
     @analyseResult result

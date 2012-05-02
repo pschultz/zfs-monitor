@@ -19,37 +19,8 @@ Query = (function(_super) {
   __extends(Query, _super);
 
   function Query() {
-    this.poolsToQuery = [];
+    Query.__super__.constructor.apply(this, arguments);
   }
-
-  Query.prototype.addPool = function(name) {
-    var i;
-    if ((function() {
-      var _i, _len, _ref, _results;
-      _ref = this.poolsToQuery;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        i = _ref[_i];
-        _results.push(i === name);
-      }
-      return _results;
-    }).call(this)) {
-      return;
-    }
-    return this.poolsToQuery.push(name);
-  };
-
-  Query.prototype.removePool = function(name) {
-    var i, pool, _len, _ref;
-    _ref = this.poolsToQuery;
-    for (i = 0, _len = _ref.length; i < _len; i++) {
-      pool = _ref[i];
-      if (pool === name) {
-        delete this.poolsToQuery[i];
-        return;
-      }
-    }
-  };
 
   Query.prototype.execute = function() {
     var self;

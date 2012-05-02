@@ -8,18 +8,6 @@ ZfsParser = require './parser/zfs'
 
 
 class Query extends events.EventEmitter
-  constructor: ->
-    @poolsToQuery = []
-
-  addPool: (name) ->
-    return if i is name for i in @poolsToQuery
-    @poolsToQuery.push(name)
-
-  removePool: (name) ->
-    for pool, i in @poolsToQuery
-      if pool is name
-        delete @poolsToQuery[i]
-        return
 
   execute: ->
     @zpools = []

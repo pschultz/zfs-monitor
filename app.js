@@ -4,8 +4,6 @@ eyes = require('eyes');
 
 Monitor = require('./modules/monitor');
 
-Monitor.subscribeForPool('tank');
-
 Monitor.on('complete', function(result) {
   var r, _i, _len, _results;
   _results = [];
@@ -16,4 +14,4 @@ Monitor.on('complete', function(result) {
   return _results;
 });
 
-Monitor.unsubscribeFromPool('tank');
+Monitor.startMonitoring();
