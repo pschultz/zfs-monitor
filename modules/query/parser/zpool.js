@@ -1,4 +1,4 @@
-var ZpoolAnalyser, diskArrayStartPattern, exports, poolScanPattern, poolStatusPattern;
+var Disk, Diskarray, PoolParser, diskArrayStartPattern, exports, poolScanPattern, poolStatusPattern;
 
 poolStatusPattern = /^ state: (\S+)/;
 
@@ -6,16 +6,18 @@ poolScanPattern = /^  scan: (resilver|scrub) in progress/;
 
 diskArrayStartPattern = /^        NAME/;
 
-ZpoolAnalyser = (function() {
+Disk = require('../../zpool/disk');
 
-  function ZpoolAnalyser(pool) {
+Diskarray = require('../../zpool/array');
+
+PoolParser = (function() {
+
+  function PoolParser(pool) {
     this.pool = pool;
   }
 
-  ZpoolAnalyser.prototype.analyse = function(zpoolOutput) {
-    var i, line, lines, nil, _ref, _ref2;
-    this.zpoolOutput = zpoolOutput;
-    lines = this.zpoolOutput;
+  PoolParser.prototype.parse = function(lines) {
+    var i, line, nil, _ref, _ref2;
     for (i = 0, _ref = lines.length - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
       line = lines[i];
       if (poolStatusPattern.test(line)) {
@@ -34,10 +36,11 @@ ZpoolAnalyser = (function() {
     return this.pool;
   };
 
-  ZpoolAnalyser.prototype.parseScans = function(lines, i) {
+  PoolParser.prototype.parseScans = function(lines, i) {
     var eta, etaPattern, hours, line, minutes, nil, percent, progress, progressPattern, type, _ref, _ref2, _ref3;
     eta = 0;
     progress = 0;
+    line = lines[i];
     _ref = poolScanPattern.exec(line), nil = _ref[0], type = _ref[1];
     line = lines[++i];
     etaPattern = /(\d+)h(\d)+m to go/;
@@ -59,7 +62,7 @@ ZpoolAnalyser = (function() {
     return i;
   };
 
-  ZpoolAnalyser.prototype.parseDiskarrays = function(lines, i) {
+  PoolParser.prototype.parseDiskarrays = function(lines, i) {
     var deviceName, deviceStatus, deviceType, disk, diskArray, indentLevel, isSpecialDevice, lastIndentLevel, leadingSpaces, line, linePattern, nil, specialDeviceNamePattern, _ref, _ref2, _ref3;
     linePattern = /^ +(\S+) *(\S+)?/;
     specialDeviceNamePattern = /^((raidz\d|mirror|logs|spares|cache)\S*)/;
@@ -92,7 +95,7 @@ ZpoolAnalyser = (function() {
     return i;
   };
 
-  ZpoolAnalyser.prototype.addDiskarray = function(name, type, status) {
+  PoolParser.prototype.addDiskarray = function(name, type, status) {
     var diskArray;
     if (status == null) status = '';
     name = type === 'striped' ? '' : name;
@@ -101,8 +104,8 @@ ZpoolAnalyser = (function() {
     return diskArray;
   };
 
-  return ZpoolAnalyser;
+  return PoolParser;
 
 })();
 
-module.exports = exports = ZpoolAnalyser;
+module.exports = exports = PoolParser;

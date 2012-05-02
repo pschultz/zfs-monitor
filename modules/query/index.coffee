@@ -2,14 +2,12 @@ cproc = require 'child_process'
 path = require 'path'
 events = require 'events'
 
-running = false
-lastRun = 0
+Pool = require '../zpool'
+Filesystem = require '../zpool/filesystem'
 
-Pool = require './pool'
-Disk = require './disk'
-Diskarray = require './array'
-Filesystem = require './filesystem'
+PoolParser = require './parser/zpool'
 
+###
 normalizeBytes = (input) ->
   for suffix, e in [ '', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y' ]
     pattern = new RegExp("^([+-]?[\\d.]+)#{suffix}$", 'i')
@@ -19,81 +17,33 @@ normalizeBytes = (input) ->
       return Math.round(numeric * Math.pow(1024, e))
 
   return 0
+###
 
 class Query extends events.EventEmitter
-  zpoolStatusOutput: ""
-  spinningTreshold: [ 60000, 300000 ]
-
-  zpool: null
-  zfs: null
-
-  deferTimer: 0
-
-  slowDown: ->
-    @spinningTreshold[0] = 60000
-
-  keepItComin: ->
-    @spinningTreshold[0] = 2000
-
-  lastAnalysis: {}
-  newAnalysis: {}
-
   constructor: ->
-    @slowDown()
+    @poolsToQuery = []
+
+  addPool: (name) ->
+    return if i is name for i in @poolsToQuery
+    @poolsToQuery.push(name)
+
+  removePool: (name) ->
+    for pool, i in @poolsToQuery
+      if pool is name
+        delete @poolsToQuery[i]
+        return
+
+  execute: ->
+    @zpools = []
     self = @
 
-    setInterval ->
-      self.killStalledProcesses()
-    , 5000
+    self.queryZpool ->
+      self.parseZpools ->
+        #self.queryZfs ->
+          #self.parseFilesystems ->
+            self.emit 'complete', self.zpools
 
-    @on 'analyzed', -> self.start()
-
-  start: ->
-    now = new Date().getTime()
-    timeSinceLastRun = now - lastRun
-    self = @
-
-    startedToFast = timeSinceLastRun < @spinningTreshold[0]
-
-    if startedToFast
-      if @deferTimer == 0
-        deferFor = @spinningTreshold[0] - (timeSinceLastRun)
-        console.log "defering zpool queries for #{deferFor} ms"
-        @deferTimer = setTimeout ->
-          self.deferTimer = 0
-          self.start()
-        , deferFor
-
-      return
-
-    running = true
-    lastRun = now
-
-    @doQuery()
-
-  killStalledProcesses: ->
-    return unless running
-    return unless @zpool? || @zfs?
-
-    now = new Date().getTime()
-    timeSinceLastRun = now - lastRun
-
-    if timeSinceLastRun > @spinningTreshold[1]
-      console.log 'zpool or zfs did not respond in time, killing them now'
-      @emit 'stalled'
-      @zpool.kill() if @zpool?
-      @zfs.kill() if @zfs?
-
-  doQuery: ->
-    self = @
-    @newAnalysis = {}
-
-    @queryZpool ->
-      self.analyseZpool()
-
-    @queryZfs ->
-      self.analyseZfs()
-
+    null
 
   queryZpool: (cb) ->
     env = process.env
@@ -114,6 +64,33 @@ class Query extends events.EventEmitter
         cb()
       else self.query()
 
+  parseZpools: (cb) ->
+    newPoolPattern = /^  +pool: (\S+)/
+    lines = @zpoolStatusOutput.split "\n"
+    poolLines = []
+    poolName = 'unnamed'
+
+    for line in lines
+      if newPoolPattern.test line
+        if poolLines.length
+          @parseZpool poolName, poolLines
+
+        poolLines = []
+        [ nil, poolName ] = newPoolPattern.exec line
+      poolLines.push line
+
+    @parseZpool poolName, poolLines
+    cb()
+
+  parseZpool: (poolName, lines) ->
+    pool = new Pool poolName
+
+    @zpools.push pool
+
+    parser = new PoolParser pool
+    parser.parse lines
+
+
   queryZfs: (cb) ->
     env = process.env
     env.PATH += ":" + path.normalize path.join __dirname, '../../zfsmock'
@@ -133,11 +110,39 @@ class Query extends events.EventEmitter
         cb()
       else self.query()
 
-  analyseZfs: ->
+  parseFilesystems: (cb) ->
+    lines = @zpoolStatusOutput.split "\n"
+    poolLines = []
+    poolName = 'unnamed'
+    lastPoolName = 'unnamed'
+
+    lastPoolname
+    for line in lines
+      [ fsName ] = line.split /\s+/
+      [ poolName ] fsName.split '/'
+
+      if poolName isnt lastPoolName
+        if poolLines.length
+          @parseFilesystem poolName, poolLines
+
+        poolLines = []
+        [ nil, poolName ] = newPoolPattern.exec line
+
+    @parseZpool poolName, poolLines
+
+  parseFilesystem: (poolName, lines) ->
+    pool = @getPoolByName()
+
+    return unless pool?
+
+    parser new ZfsParser pool
+    parser.parse lines
 
   getPoolByName: (name) ->
-    for pool in @newAnalysis.pools
+    for pool in @zpools
       return pool if pool.name is name
+
+    return null
 
 
 module.exports = exports = Query

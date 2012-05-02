@@ -2,12 +2,13 @@ poolStatusPattern = /^ state: (\S+)/
 poolScanPattern   = /^  scan: (resilver|scrub) in progress/
 diskArrayStartPattern = /^        NAME/
 
-class ZpoolAnalyser
+Disk = require '../../zpool/disk'
+Diskarray = require '../../zpool/array'
+
+class PoolParser
   constructor: (@pool) ->
 
-  analyse: (@zpoolOutput) ->
-    lines = @zpoolOutput
-
+  parse: (lines) ->
     for i in [0..lines.length - 1]
       line = lines[i]
 
@@ -28,6 +29,8 @@ class ZpoolAnalyser
   parseScans: (lines, i) ->
     eta = 0
     progress = 0
+
+    line = lines[i]
 
     [ nil, type ] = poolScanPattern.exec line
 
@@ -98,4 +101,4 @@ class ZpoolAnalyser
     @pool.addDiskarray diskArray
     diskArray
 
-module.exports = exports = ZpoolAnalyser
+module.exports = exports = PoolParser

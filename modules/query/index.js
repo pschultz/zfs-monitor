@@ -1,4 +1,4 @@
-var Disk, Diskarray, Filesystem, Pool, Query, cproc, events, exports, lastRun, normalizeBytes, path, running,
+var Filesystem, Pool, PoolParser, Query, cproc, events, exports, path,
   __hasProp = Object.prototype.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
@@ -8,116 +8,71 @@ path = require('path');
 
 events = require('events');
 
-running = false;
+Pool = require('../zpool');
 
-lastRun = 0;
+Filesystem = require('../zpool/filesystem');
 
-Pool = require('./pool');
+PoolParser = require('./parser/zpool');
 
-Disk = require('./disk');
+/*
+normalizeBytes = (input) ->
+  for suffix, e in [ '', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y' ]
+    pattern = new RegExp("^([+-]?[\\d.]+)#{suffix}$", 'i')
 
-Diskarray = require('./array');
+    if pattern.test input
+      [ nil, numeric ] = pattern.exec input
+      return Math.round(numeric * Math.pow(1024, e))
 
-Filesystem = require('./filesystem');
-
-normalizeBytes = function(input) {
-  var e, nil, numeric, pattern, suffix, _len, _ref, _ref2;
-  _ref = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'];
-  for (e = 0, _len = _ref.length; e < _len; e++) {
-    suffix = _ref[e];
-    pattern = new RegExp("^([+-]?[\\d.]+)" + suffix + "$", 'i');
-    if (pattern.test(input)) {
-      _ref2 = pattern.exec(input), nil = _ref2[0], numeric = _ref2[1];
-      return Math.round(numeric * Math.pow(1024, e));
-    }
-  }
-  return 0;
-};
+  return 0
+*/
 
 Query = (function(_super) {
 
   __extends(Query, _super);
 
-  Query.prototype.zpoolStatusOutput = "";
-
-  Query.prototype.spinningTreshold = [60000, 300000];
-
-  Query.prototype.zpool = null;
-
-  Query.prototype.zfs = null;
-
-  Query.prototype.deferTimer = 0;
-
-  Query.prototype.slowDown = function() {
-    return this.spinningTreshold[0] = 60000;
-  };
-
-  Query.prototype.keepItComin = function() {
-    return this.spinningTreshold[0] = 2000;
-  };
-
-  Query.prototype.lastAnalysis = {};
-
-  Query.prototype.newAnalysis = {};
-
   function Query() {
-    var self;
-    this.slowDown();
-    self = this;
-    setInterval(function() {
-      return self.killStalledProcesses();
-    }, 5000);
-    this.on('analyzed', function() {
-      return self.start();
-    });
+    this.poolsToQuery = [];
   }
 
-  Query.prototype.start = function() {
-    var deferFor, now, self, startedToFast, timeSinceLastRun;
-    now = new Date().getTime();
-    timeSinceLastRun = now - lastRun;
-    self = this;
-    startedToFast = timeSinceLastRun < this.spinningTreshold[0];
-    if (startedToFast) {
-      if (this.deferTimer === 0) {
-        deferFor = this.spinningTreshold[0] - timeSinceLastRun;
-        console.log("defering zpool queries for " + deferFor + " ms");
-        this.deferTimer = setTimeout(function() {
-          self.deferTimer = 0;
-          return self.start();
-        }, deferFor);
+  Query.prototype.addPool = function(name) {
+    var i;
+    if ((function() {
+      var _i, _len, _ref, _results;
+      _ref = this.poolsToQuery;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        i = _ref[_i];
+        _results.push(i === name);
       }
+      return _results;
+    }).call(this)) {
       return;
     }
-    running = true;
-    lastRun = now;
-    return this.doQuery();
+    return this.poolsToQuery.push(name);
   };
 
-  Query.prototype.killStalledProcesses = function() {
-    var now, timeSinceLastRun;
-    if (!running) return;
-    if (!((this.zpool != null) || (this.zfs != null))) return;
-    now = new Date().getTime();
-    timeSinceLastRun = now - lastRun;
-    if (timeSinceLastRun > this.spinningTreshold[1]) {
-      console.log('zpool or zfs did not respond in time, killing them now');
-      this.emit('stalled');
-      if (this.zpool != null) this.zpool.kill();
-      if (this.zfs != null) return this.zfs.kill();
+  Query.prototype.removePool = function(name) {
+    var i, pool, _len, _ref;
+    _ref = this.poolsToQuery;
+    for (i = 0, _len = _ref.length; i < _len; i++) {
+      pool = _ref[i];
+      if (pool === name) {
+        delete this.poolsToQuery[i];
+        return;
+      }
     }
   };
 
-  Query.prototype.doQuery = function() {
+  Query.prototype.execute = function() {
     var self;
+    this.zpools = [];
     self = this;
-    this.newAnalysis = {};
-    this.queryZpool(function() {
-      return self.analyseZpool();
+    self.queryZpool(function() {
+      return self.parseZpools(function() {
+        return self.emit('complete', self.zpools);
+      });
     });
-    return this.queryZfs(function() {
-      return self.analyseZfs();
-    });
+    return null;
   };
 
   Query.prototype.queryZpool = function(cb) {
@@ -144,6 +99,33 @@ Query = (function(_super) {
     });
   };
 
+  Query.prototype.parseZpools = function(cb) {
+    var line, lines, newPoolPattern, nil, poolLines, poolName, _i, _len, _ref;
+    newPoolPattern = /^  +pool: (\S+)/;
+    lines = this.zpoolStatusOutput.split("\n");
+    poolLines = [];
+    poolName = 'unnamed';
+    for (_i = 0, _len = lines.length; _i < _len; _i++) {
+      line = lines[_i];
+      if (newPoolPattern.test(line)) {
+        if (poolLines.length) this.parseZpool(poolName, poolLines);
+        poolLines = [];
+        _ref = newPoolPattern.exec(line), nil = _ref[0], poolName = _ref[1];
+      }
+      poolLines.push(line);
+    }
+    this.parseZpool(poolName, poolLines);
+    return cb();
+  };
+
+  Query.prototype.parseZpool = function(poolName, lines) {
+    var parser, pool;
+    pool = new Pool(poolName);
+    this.zpools.push(pool);
+    parser = new PoolParser(pool);
+    return parser.parse(lines);
+  };
+
   Query.prototype.queryZfs = function(cb) {
     var env, self;
     env = process.env;
@@ -168,15 +150,42 @@ Query = (function(_super) {
     });
   };
 
-  Query.prototype.analyseZfs = function() {};
+  Query.prototype.parseFilesystems = function(cb) {
+    var fsName, lastPoolName, line, lines, nil, poolLines, poolName, _i, _len, _ref;
+    lines = this.zpoolStatusOutput.split("\n");
+    poolLines = [];
+    poolName = 'unnamed';
+    lastPoolName = 'unnamed';
+    lastPoolname;
+    for (_i = 0, _len = lines.length; _i < _len; _i++) {
+      line = lines[_i];
+      fsName = line.split(/\s+/)[0];
+      [poolName](fsName.split('/'));
+      if (poolName !== lastPoolName) {
+        if (poolLines.length) this.parseFilesystem(poolName, poolLines);
+        poolLines = [];
+        _ref = newPoolPattern.exec(line), nil = _ref[0], poolName = _ref[1];
+      }
+    }
+    return this.parseZpool(poolName, poolLines);
+  };
+
+  Query.prototype.parseFilesystem = function(poolName, lines) {
+    var pool;
+    pool = this.getPoolByName();
+    if (pool == null) return;
+    parser(new ZfsParser(pool));
+    return parser.parse(lines);
+  };
 
   Query.prototype.getPoolByName = function(name) {
     var pool, _i, _len, _ref;
-    _ref = this.newAnalysis.pools;
+    _ref = this.zpools;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       pool = _ref[_i];
       if (pool.name === name) return pool;
     }
+    return null;
   };
 
   return Query;
