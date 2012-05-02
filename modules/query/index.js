@@ -56,8 +56,6 @@ Query = (function(_super) {
       if (code === 0) {
         self.zpool = null;
         return cb();
-      } else {
-        return self.query();
       }
     });
   };

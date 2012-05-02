@@ -38,7 +38,6 @@ class Query extends events.EventEmitter
       if code == 0
         self.zpool = null
         cb()
-      else self.query()
 
   parseZpools: (cb) ->
     newPoolPattern = /^  +pool: (\S+)/
