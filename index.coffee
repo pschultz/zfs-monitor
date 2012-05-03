@@ -1,7 +1,7 @@
 events = require 'events'
 
-Query = require '../query'
-Comparator = require './pool-comparator'
+Query = require './modules/query'
+Comparator = require './modules/monitor/pool-comparator'
 
 class Monitor extends events.EventEmitter
   constructor: ->

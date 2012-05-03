@@ -1,0 +1,20 @@
+{
+    "name": "zfs-monitor"
+  , "description": "Module for monitoring zpools and zfs and emitting events when something changes"
+  , "author": {
+      "name": "Peter Schultz"
+    , "email": "schultz.peter@hotmail.com"
+  }
+  , "contributors": [
+    {
+        "name": "Peter Schultz"
+      , "email": "schultz.peter@hotmail.com"
+    }
+  ]
+  , "version": "1.0.0"
+  , "private": true
+  , "dependencies": { }
+  , "engines": {
+      "node": ">= 0.6.0 < 0.7.0"
+  }
+}

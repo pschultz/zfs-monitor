@@ -5,9 +5,9 @@ var Comparator, Monitor, Query, events, exports,
 
 events = require('events');
 
-Query = require('../query');
+Query = require('./modules/query');
 
-Comparator = require('./pool-comparator');
+Comparator = require('./modules/monitor/pool-comparator');
 
 Monitor = (function(_super) {
 
