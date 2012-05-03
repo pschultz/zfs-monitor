@@ -20,13 +20,11 @@ class Monitor extends events.EventEmitter
   stopMonitoring: ->
     clearInterval @interval if @interval
 
-  getSnapshot: (cb) ->
-    return cb @lastStatus  if @lastStatus?
+    return if @interval is 0
+    clearInterval @interval
+    @interval = 0
 
-    @query.once 'complete', (result) ->
-      cb result
-
-    @query.execute()
+  getSnapshot: -> @lastStatus
 
   onQueryComplete: (result) =>
     @analyseResult result

@@ -33,12 +33,8 @@ Monitor = (function(_super) {
     if (this.interval) return clearInterval(this.interval);
   };
 
-  Monitor.prototype.getSnapshot = function(cb) {
-    if (this.lastStatus != null) return cb(this.lastStatus);
-    this.query.once('complete', function(result) {
-      return cb(result);
-    });
-    return this.query.execute();
+  Monitor.prototype.getSnapshot = function() {
+    return this.lastStatus;
   };
 
   Monitor.prototype.onQueryComplete = function(result) {
