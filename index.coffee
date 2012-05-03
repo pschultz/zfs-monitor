@@ -12,14 +12,16 @@ class Monitor extends events.EventEmitter
     @query.on 'complete', @onQueryComplete
 
   startMonitoring: ->
+    return unless @interval is 0
+
+    @query.execute()
+
     self = @
     @interval = setInterval ->
       self.query.execute()
     , 2000
 
   stopMonitoring: ->
-    clearInterval @interval if @interval
-
     return if @interval is 0
     clearInterval @interval
     @interval = 0

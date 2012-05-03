@@ -23,6 +23,8 @@ Monitor = (function(_super) {
 
   Monitor.prototype.startMonitoring = function() {
     var self;
+    if (this.interval !== 0) return;
+    this.query.execute();
     self = this;
     return this.interval = setInterval(function() {
       return self.query.execute();
@@ -30,7 +32,9 @@ Monitor = (function(_super) {
   };
 
   Monitor.prototype.stopMonitoring = function() {
-    if (this.interval) return clearInterval(this.interval);
+    if (this.interval === 0) return;
+    clearInterval(this.interval);
+    return this.interval = 0;
   };
 
   Monitor.prototype.getSnapshot = function() {
