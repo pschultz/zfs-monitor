@@ -25,6 +25,10 @@ ZPool = (function() {
     return this.filesystems.push(fs);
   };
 
+  ZPool.prototype.equals = function(rhs) {
+    return this.size === rhs.size && this.allocated === rhs.allocated;
+  };
+
   return ZPool;
 
 })();

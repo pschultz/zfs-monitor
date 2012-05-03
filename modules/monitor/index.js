@@ -70,27 +70,29 @@ Monitor = (function(_super) {
   };
 
   Monitor.prototype.diffPools = function(lhsPools, rhsPools, type, compareLeaves) {
-    return this.diffSomethings(lhsPools, rhsPools, [], 'pool', type, function(lhs, rhs, parentIds) {
-      this.diffSomethings(lhs.scans, rhs.scans, parentIds, 'scan', type);
-      this.diffSomethings(lhs.filesystems, rhs.filesystems, parentIds, 'zfs', type, function(lhs, rhs, parentIds) {});
-      return this.diffSomethings(lhs.diskArrays, rhs.diskArrays, parentIds, 'diskarray', type, function(lhs, rhs, parentIds) {
-        return this.diffSomethings(lhs.disks, rhs.disks, parentIds, 'disk', type, function(lhs, rhs) {});
+    return this.diffSomethings(lhsPools, rhsPools, [], 'pool', type, compareLeaves, function(lhs, rhs, parentIds) {
+      var poolParent;
+      poolParent = parentIds;
+      this.diffSomethings(lhs.scans, rhs.scans, parentIds, 'scan', type, compareLeaves);
+      this.diffSomethings(lhs.filesystems, rhs.filesystems, parentIds, 'zfs', type, compareLeaves, function(lhs, rhs, parentIds) {});
+      return this.diffSomethings(lhs.diskArrays, rhs.diskArrays, parentIds, 'diskarray', type, compareLeaves, function(lhs, rhs, parentIds) {
+        return this.diffSomethings(lhs.disks, rhs.disks, parentIds, 'disk', type, compareLeaves, function(lhs, rhs) {});
       });
     });
   };
 
-  Monitor.prototype.diffSomethings = function(lhsSth, rhsSth, parentIds, sthType, changeType, next) {
+  Monitor.prototype.diffSomethings = function(lhsSth, rhsSth, parentIds, sthType, changeType, compareLeaves, next) {
     var lhs, _i, _len, _results;
     if (next == null) next = function() {};
     _results = [];
     for (_i = 0, _len = lhsSth.length; _i < _len; _i++) {
       lhs = lhsSth[_i];
-      _results.push(this.diffSomething(lhs, rhsSth, parentIds.slice(), sthType, changeType, next));
+      _results.push(this.diffSomething(lhs, rhsSth, parentIds.slice(), sthType, changeType, compareLeaves, next));
     }
     return _results;
   };
 
-  Monitor.prototype.diffSomething = function(lhs, rhsSth, parentIds, sthType, changeType, next) {
+  Monitor.prototype.diffSomething = function(lhs, rhsSth, parentIds, sthType, changeType, compareLeaves, next) {
     var eventPrefixes, lhsChanged, nextRhs, rhs, _i, _len;
     if (next == null) next = function() {};
     lhsChanged = true;
@@ -103,8 +105,11 @@ Monitor = (function(_super) {
     }
     eventPrefixes = this.getEventPrefixes(lhs, sthType);
     if (lhsChanged) {
-      return this.emitChange(lhs, changeType, eventPrefixes, parentIds);
+      return this.emitChange(lhs, changeType, parentIds, eventPrefixes);
     } else {
+      if (compareLeaves && (lhs.equals != null) && !lhs.equals(nextRhs)) {
+        this.emitChange(lhs, 'change', parentIds, eventPrefixes);
+      }
       return next.call(this, lhs, nextRhs, eventPrefixes.slice(1));
     }
   };
@@ -118,9 +123,13 @@ Monitor = (function(_super) {
     return eventPrefixes;
   };
 
-  Monitor.prototype.emitChange = function(lhs, changeType, eventPrefixes, parentIds) {
+  Monitor.prototype.emitChange = function(lhs, changeType, parentIds, eventPrefixes) {
     var e, p, _i, _len, _results;
     if (parentIds == null) parentIds = [];
+    if (eventPrefixes == null) eventPrefixes = null;
+    if (eventPrefixes == null) {
+      eventPrefixes = this.getEventPrefixes(lhs, changeType);
+    }
     _results = [];
     for (_i = 0, _len = eventPrefixes.length; _i < _len; _i++) {
       e = eventPrefixes[_i];

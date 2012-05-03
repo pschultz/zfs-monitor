@@ -8,6 +8,10 @@ Filesystem = (function() {
     this.id = require('./uniqid')(this.name);
   }
 
+  Filesystem.prototype.equals = function(rhs) {
+    return this.size === rhs.size;
+  };
+
   return Filesystem;
 
 })();

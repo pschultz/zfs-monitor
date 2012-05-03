@@ -10,6 +10,10 @@ Scan = (function() {
     this.id = require('./uniqid')("" + this.poolName + "-" + this.type);
   }
 
+  Scan.prototype.equals = function(rhs) {
+    return this.progress === rhs.progress && this.eta === rhs.eta;
+  };
+
   return Scan;
 
 })();

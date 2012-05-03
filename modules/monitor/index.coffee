@@ -52,17 +52,18 @@ class Monitor extends events.EventEmitter
     @diffPools result[1..1], @lastStatus[1..1], 'added', false
 
   diffPools: (lhsPools, rhsPools, type, compareLeaves) ->
-    @diffSomethings lhsPools,        rhsPools,        [],        'pool',      type, (lhs, rhs, parentIds) ->
-      @diffSomethings lhs.scans,       rhs.scans,       parentIds, 'scan',      type
-      @diffSomethings lhs.filesystems, rhs.filesystems, parentIds, 'zfs',       type, (lhs, rhs, parentIds) ->
-      @diffSomethings lhs.diskArrays,  rhs.diskArrays,  parentIds, 'diskarray', type, (lhs, rhs, parentIds) ->
-        @diffSomethings lhs.disks,       rhs.disks,       parentIds, 'disk',      type, (lhs, rhs) ->
+    @diffSomethings lhsPools,        rhsPools,        [],        'pool',      type, compareLeaves, (lhs, rhs, parentIds) ->
+      poolParent = parentIds
+      @diffSomethings lhs.scans,       rhs.scans,       parentIds, 'scan',      type, compareLeaves
+      @diffSomethings lhs.filesystems, rhs.filesystems, parentIds, 'zfs',       type, compareLeaves, (lhs, rhs, parentIds) ->
+      @diffSomethings lhs.diskArrays,  rhs.diskArrays,  parentIds, 'diskarray', type, compareLeaves, (lhs, rhs, parentIds) ->
+        @diffSomethings lhs.disks,       rhs.disks,       parentIds, 'disk',      type, compareLeaves, (lhs, rhs) ->
 
-  diffSomethings: (lhsSth, rhsSth, parentIds, sthType, changeType, next = ->) ->
+  diffSomethings: (lhsSth, rhsSth, parentIds, sthType, changeType, compareLeaves, next = ->) ->
     for lhs in lhsSth
-      @diffSomething lhs, rhsSth, parentIds.slice(), sthType, changeType, next
+      @diffSomething lhs, rhsSth, parentIds.slice(), sthType, changeType, compareLeaves, next
 
-  diffSomething: (lhs, rhsSth, parentIds, sthType, changeType, next = ->) ->
+  diffSomething: (lhs, rhsSth, parentIds, sthType, changeType, compareLeaves, next = ->) ->
     lhsChanged = true
     for rhs in rhsSth
       if lhs.id == rhs.id
@@ -72,9 +73,12 @@ class Monitor extends events.EventEmitter
     eventPrefixes = @getEventPrefixes lhs, sthType
 
     if lhsChanged
-      @emitChange lhs, changeType, eventPrefixes, parentIds
+      @emitChange lhs, changeType, parentIds, eventPrefixes
 
     else
+      if compareLeaves and lhs.equals? and not lhs.equals nextRhs
+        @emitChange lhs, 'change', parentIds, eventPrefixes
+
       next.call @, lhs, nextRhs, eventPrefixes[1..]
 
   getEventPrefixes: (lhs, sthType) ->
@@ -84,7 +88,8 @@ class Monitor extends events.EventEmitter
     eventPrefixes.push [ sthType, lhs.name ].join(':') if(lhs.name?)
     return eventPrefixes
 
-  emitChange: (lhs, changeType, eventPrefixes, parentIds = []) ->
+  emitChange: (lhs, changeType, parentIds = [], eventPrefixes = null) ->
+    eventPrefixes = @getEventPrefixes lhs, changeType unless eventPrefixes?
     for e in eventPrefixes
       @_emit [   e, changeType].join(':'), lhs
       for p in parentIds
