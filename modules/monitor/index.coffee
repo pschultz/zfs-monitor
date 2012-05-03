@@ -46,17 +46,17 @@ class Monitor extends events.EventEmitter
     @checkForAddedElements result
 
   checkForMissingElements: (result) ->
-    @diffPools @lastStatus[3..3], result[3..3], 'removed'
+    @diffPools @lastStatus[1..1], result[1..1], 'removed', true
 
   checkForAddedElements: (result) ->
-    @diffPools result[3..3], @lastStatus[3..3], 'added'
+    @diffPools result[1..1], @lastStatus[1..1], 'added', false
 
-  diffPools: (lhsPools, rhsPools, type) ->
+  diffPools: (lhsPools, rhsPools, type, compareLeaves) ->
     @diffSomethings lhsPools,        rhsPools,        [],        'pool',      type, (lhs, rhs, parentIds) ->
       @diffSomethings lhs.scans,       rhs.scans,       parentIds, 'scan',      type
-      @diffSomethings lhs.filesystems, rhs.filesystems, parentIds, 'zfs',       type
+      @diffSomethings lhs.filesystems, rhs.filesystems, parentIds, 'zfs',       type, (lhs, rhs, parentIds) ->
       @diffSomethings lhs.diskArrays,  rhs.diskArrays,  parentIds, 'diskarray', type, (lhs, rhs, parentIds) ->
-        @diffSomethings lhs.disks,       rhs.disks,       parentIds, 'disk',      type
+        @diffSomethings lhs.disks,       rhs.disks,       parentIds, 'disk',      type, (lhs, rhs) ->
 
   diffSomethings: (lhsSth, rhsSth, parentIds, sthType, changeType, next = ->) ->
     for lhs in lhsSth
@@ -69,20 +69,26 @@ class Monitor extends events.EventEmitter
         nextRhs = rhs
         lhsChanged = false
 
+    eventPrefixes = @getEventPrefixes lhs, sthType
+
+    if lhsChanged
+      @emitChange lhs, changeType, eventPrefixes, parentIds
+
+    else
+      next.call @, lhs, nextRhs, eventPrefixes[1..]
+
+  getEventPrefixes: (lhs, sthType) ->
     eventPrefixes = []
     eventPrefixes.push [ sthType,      '*' ].join(':')
     eventPrefixes.push [ sthType,   lhs.id ].join(':')
     eventPrefixes.push [ sthType, lhs.name ].join(':') if(lhs.name?)
+    return eventPrefixes
 
-    if lhsChanged
-      for e in eventPrefixes
-        @_emit [   e, changeType].join(':'), lhs
-        for p in parentIds
-          @_emit [p, e, changeType].join(':'), lhs
-
-    else
-
-      next.call @, lhs, nextRhs, eventPrefixes[1..]
+  emitChange: (lhs, changeType, eventPrefixes, parentIds = []) ->
+    for e in eventPrefixes
+      @_emit [   e, changeType].join(':'), lhs
+      for p in parentIds
+        @_emit [p, e, changeType].join(':'), lhs
       
 
 module.exports = exports = new Monitor()

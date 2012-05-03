@@ -62,19 +62,19 @@ Monitor = (function(_super) {
   };
 
   Monitor.prototype.checkForMissingElements = function(result) {
-    return this.diffPools(this.lastStatus.slice(3, 4), result.slice(3, 4), 'removed');
+    return this.diffPools(this.lastStatus.slice(1, 2), result.slice(1, 2), 'removed', true);
   };
 
   Monitor.prototype.checkForAddedElements = function(result) {
-    return this.diffPools(result.slice(3, 4), this.lastStatus.slice(3, 4), 'added');
+    return this.diffPools(result.slice(1, 2), this.lastStatus.slice(1, 2), 'added', false);
   };
 
-  Monitor.prototype.diffPools = function(lhsPools, rhsPools, type) {
+  Monitor.prototype.diffPools = function(lhsPools, rhsPools, type, compareLeaves) {
     return this.diffSomethings(lhsPools, rhsPools, [], 'pool', type, function(lhs, rhs, parentIds) {
       this.diffSomethings(lhs.scans, rhs.scans, parentIds, 'scan', type);
-      this.diffSomethings(lhs.filesystems, rhs.filesystems, parentIds, 'zfs', type);
+      this.diffSomethings(lhs.filesystems, rhs.filesystems, parentIds, 'zfs', type, function(lhs, rhs, parentIds) {});
       return this.diffSomethings(lhs.diskArrays, rhs.diskArrays, parentIds, 'diskarray', type, function(lhs, rhs, parentIds) {
-        return this.diffSomethings(lhs.disks, rhs.disks, parentIds, 'disk', type);
+        return this.diffSomethings(lhs.disks, rhs.disks, parentIds, 'disk', type, function(lhs, rhs) {});
       });
     });
   };
@@ -91,7 +91,7 @@ Monitor = (function(_super) {
   };
 
   Monitor.prototype.diffSomething = function(lhs, rhsSth, parentIds, sthType, changeType, next) {
-    var e, eventPrefixes, lhsChanged, nextRhs, p, rhs, _i, _j, _len, _len2, _results;
+    var eventPrefixes, lhsChanged, nextRhs, rhs, _i, _len;
     if (next == null) next = function() {};
     lhsChanged = true;
     for (_i = 0, _len = rhsSth.length; _i < _len; _i++) {
@@ -101,29 +101,41 @@ Monitor = (function(_super) {
         lhsChanged = false;
       }
     }
+    eventPrefixes = this.getEventPrefixes(lhs, sthType);
+    if (lhsChanged) {
+      return this.emitChange(lhs, changeType, eventPrefixes, parentIds);
+    } else {
+      return next.call(this, lhs, nextRhs, eventPrefixes.slice(1));
+    }
+  };
+
+  Monitor.prototype.getEventPrefixes = function(lhs, sthType) {
+    var eventPrefixes;
     eventPrefixes = [];
     eventPrefixes.push([sthType, '*'].join(':'));
     eventPrefixes.push([sthType, lhs.id].join(':'));
     if ((lhs.name != null)) eventPrefixes.push([sthType, lhs.name].join(':'));
-    if (lhsChanged) {
-      _results = [];
-      for (_j = 0, _len2 = eventPrefixes.length; _j < _len2; _j++) {
-        e = eventPrefixes[_j];
-        this._emit([e, changeType].join(':'), lhs);
-        _results.push((function() {
-          var _k, _len3, _results2;
-          _results2 = [];
-          for (_k = 0, _len3 = parentIds.length; _k < _len3; _k++) {
-            p = parentIds[_k];
-            _results2.push(this._emit([p, e, changeType].join(':'), lhs));
-          }
-          return _results2;
-        }).call(this));
-      }
-      return _results;
-    } else {
-      return next.call(this, lhs, nextRhs, eventPrefixes.slice(1));
+    return eventPrefixes;
+  };
+
+  Monitor.prototype.emitChange = function(lhs, changeType, eventPrefixes, parentIds) {
+    var e, p, _i, _len, _results;
+    if (parentIds == null) parentIds = [];
+    _results = [];
+    for (_i = 0, _len = eventPrefixes.length; _i < _len; _i++) {
+      e = eventPrefixes[_i];
+      this._emit([e, changeType].join(':'), lhs);
+      _results.push((function() {
+        var _j, _len2, _results2;
+        _results2 = [];
+        for (_j = 0, _len2 = parentIds.length; _j < _len2; _j++) {
+          p = parentIds[_j];
+          _results2.push(this._emit([p, e, changeType].join(':'), lhs));
+        }
+        return _results2;
+      }).call(this));
     }
+    return _results;
   };
 
   return Monitor;
