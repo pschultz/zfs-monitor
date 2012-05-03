@@ -30,8 +30,8 @@ class Monitor extends events.EventEmitter
 
   onQueryComplete: (result) =>
     @analyseResult result
-    @lastStatus = result
-    @emit 'complete', result
+    @lastStatus = zpools: result
+    @emit 'complete', @lastStatus
 
   _emit: =>
     @emit.apply @, arguments
@@ -43,7 +43,7 @@ class Monitor extends events.EventEmitter
     return unless @lastStatus?
 
     comparator = new Comparator @
-    comparator.compare @lastStatus, result
+    comparator.compare @lastStatus.zpools, result
 
 
 module.exports = exports = new Monitor()

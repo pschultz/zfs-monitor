@@ -43,8 +43,10 @@ Monitor = (function(_super) {
 
   Monitor.prototype.onQueryComplete = function(result) {
     this.analyseResult(result);
-    this.lastStatus = result;
-    return this.emit('complete', result);
+    this.lastStatus = {
+      zpools: result
+    };
+    return this.emit('complete', this.lastStatus);
   };
 
   Monitor.prototype._emit = function() {
@@ -59,7 +61,7 @@ Monitor = (function(_super) {
     var comparator;
     if (this.lastStatus == null) return;
     comparator = new Comparator(this);
-    return comparator.compare(this.lastStatus, result);
+    return comparator.compare(this.lastStatus.zpools, result);
   };
 
   return Monitor;
