@@ -20,7 +20,7 @@ class ZfsAnalyser
     filesystems = []
     poolName = @pool.name
 
-    for i in [lines.length - 1 .. 1]
+    for i in [lines.length - 1 .. 0]
       line = lines[i]
       continue unless line
 

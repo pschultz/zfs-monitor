@@ -30,7 +30,7 @@ ZfsAnalyser = (function() {
     };
     filesystems = [];
     poolName = this.pool.name;
-    for (i = _ref = lines.length - 1; _ref <= 1 ? i <= 1 : i >= 1; _ref <= 1 ? i++ : i--) {
+    for (i = _ref = lines.length - 1; _ref <= 0 ? i <= 0 : i >= 0; _ref <= 0 ? i++ : i--) {
       line = lines[i];
       if (!line) continue;
       _ref2 = line.split(/\s+/), name = _ref2[0], used = _ref2[1], available = _ref2[2], referenced = _ref2[3], usedBySnapshot = _ref2[4];
