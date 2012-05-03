@@ -6,7 +6,7 @@ class ZPool
     @scans       = []
     @diskArrays  = []
     @filesystems = []
-    @id = require('crypto').createHash('md5').update(@name).digest('hex')
+    @id = require('./uniqid') @name
 
   addDiskarray: (array) ->
     @diskArrays.push array

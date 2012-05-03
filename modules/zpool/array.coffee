@@ -2,6 +2,6 @@ class Diskarray
 
   constructor: (@name = 'unnamed', @type = 'striped', @status = '') ->
     @disks = []
-    @id = require('crypto').createHash('md5').update(@name).digest('hex')
+    @id = require('./uniqid') @name
 
 module.exports = exports = Diskarray

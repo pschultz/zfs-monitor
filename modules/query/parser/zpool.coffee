@@ -2,6 +2,7 @@ poolStatusPattern = /^ state: (\S+)/
 poolScanPattern   = /^  scan: (resilver|scrub) in progress/
 diskArrayStartPattern = /^        NAME/
 
+Scan = require '../../zpool/scan'
 Disk = require '../../zpool/disk'
 Diskarray = require '../../zpool/array'
 
@@ -50,11 +51,7 @@ class PoolParser
       [ nil, percent ] = progressPattern.exec line
       progress = percent / 100
 
-    @pool.addScan {
-      type: type
-      eta: eta
-      progress: progress
-    }
+    @pool.addScan new Scan @pool.name, type, progress, eta
 
     return i
 

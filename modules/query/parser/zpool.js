@@ -1,10 +1,12 @@
-var Disk, Diskarray, PoolParser, diskArrayStartPattern, exports, poolScanPattern, poolStatusPattern;
+var Disk, Diskarray, PoolParser, Scan, diskArrayStartPattern, exports, poolScanPattern, poolStatusPattern;
 
 poolStatusPattern = /^ state: (\S+)/;
 
 poolScanPattern = /^  scan: (resilver|scrub) in progress/;
 
 diskArrayStartPattern = /^        NAME/;
+
+Scan = require('../../zpool/scan');
 
 Disk = require('../../zpool/disk');
 
@@ -55,11 +57,7 @@ PoolParser = (function() {
       _ref3 = progressPattern.exec(line), nil = _ref3[0], percent = _ref3[1];
       progress = percent / 100;
     }
-    this.pool.addScan({
-      type: type,
-      eta: eta,
-      progress: progress
-    });
+    this.pool.addScan(new Scan(this.pool.name, type, progress, eta));
     return i;
   };
 

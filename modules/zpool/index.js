@@ -10,7 +10,7 @@ ZPool = (function() {
     this.scans = [];
     this.diskArrays = [];
     this.filesystems = [];
-    this.id = require('crypto').createHash('md5').update(this.name).digest('hex');
+    this.id = require('./uniqid')(this.name);
   }
 
   ZPool.prototype.addDiskarray = function(array) {

@@ -58,54 +58,72 @@ Monitor = (function(_super) {
   Monitor.prototype.analyseResult = function(result) {
     if (this.lastStatus == null) return;
     this.checkForMissingElements(result);
-    return this.checkForAddedElements(result, function() {
-      return this._emit('foo');
-    });
+    return this.checkForAddedElements(result);
   };
 
   Monitor.prototype.checkForMissingElements = function(result) {
-    return this.diffPools(this.lastStatus.slice(1, 2), result.slice(1, 2), 'removed');
+    return this.diffPools(this.lastStatus.slice(3, 4), result.slice(3, 4), 'removed');
   };
 
-  Monitor.prototype.checkForAddedElements = function(result, cb) {
-    return this.diffPools(result.slice(1, 2), this.lastStatus.slice(1, 2), 'added', cb);
+  Monitor.prototype.checkForAddedElements = function(result) {
+    return this.diffPools(result.slice(3, 4), this.lastStatus.slice(3, 4), 'added');
   };
 
-  Monitor.prototype.diffPools = function(lhsPools, rhsPools, type, cb) {
-    if (cb == null) cb = function() {};
-    return this.diffSomething(lhsPools, rhsPools, 'pool', type, function(lhs, rhs) {
-      this.diffSomething(lhs.filesystems, rhs.filesystems, 'zfs', type);
-      return this.diffSomething(lhs.diskArrays, rhs.diskArrays, 'diskarray', type, function(lhs, rhs) {
-        return this.diffSomething(lhs.disks, rhs.disks, 'disk', type);
+  Monitor.prototype.diffPools = function(lhsPools, rhsPools, type) {
+    return this.diffSomethings(lhsPools, rhsPools, [], 'pool', type, function(lhs, rhs, parentIds) {
+      this.diffSomethings(lhs.scans, rhs.scans, parentIds, 'scan', type);
+      this.diffSomethings(lhs.filesystems, rhs.filesystems, parentIds, 'zfs', type);
+      return this.diffSomethings(lhs.diskArrays, rhs.diskArrays, parentIds, 'diskarray', type, function(lhs, rhs, parentIds) {
+        return this.diffSomethings(lhs.disks, rhs.disks, parentIds, 'disk', type);
       });
     });
   };
 
-  Monitor.prototype.diffSomething = function(lhsSth, rhsSth, sthType, changeType, next) {
-    var lhs, lhsChanged, nextRhs, rhs, _i, _j, _len, _len2, _results;
+  Monitor.prototype.diffSomethings = function(lhsSth, rhsSth, parentIds, sthType, changeType, next) {
+    var lhs, _i, _len, _results;
     if (next == null) next = function() {};
     _results = [];
     for (_i = 0, _len = lhsSth.length; _i < _len; _i++) {
       lhs = lhsSth[_i];
-      lhsChanged = true;
-      for (_j = 0, _len2 = rhsSth.length; _j < _len2; _j++) {
-        rhs = rhsSth[_j];
-        if (lhs.id === rhs.id) {
-          nextRhs = rhs;
-          lhsChanged = false;
-        }
-      }
-      if (lhsChanged) {
-        this._emit([sthType, lhs.id, changeType].join(':'), lhs);
-        if ((lhs.name != null)) {
-          this._emit([sthType, lhs.name, changeType].join(':'), lhs);
-        }
-        _results.push(this._emit([sthType, '*', changeType].join(':'), lhs));
-      } else {
-        _results.push(next.call(this, lhs, nextRhs));
-      }
+      _results.push(this.diffSomething(lhs, rhsSth, parentIds.slice(), sthType, changeType, next));
     }
     return _results;
+  };
+
+  Monitor.prototype.diffSomething = function(lhs, rhsSth, parentIds, sthType, changeType, next) {
+    var e, eventPrefixes, lhsChanged, nextRhs, p, rhs, _i, _j, _len, _len2, _results;
+    if (next == null) next = function() {};
+    lhsChanged = true;
+    for (_i = 0, _len = rhsSth.length; _i < _len; _i++) {
+      rhs = rhsSth[_i];
+      if (lhs.id === rhs.id) {
+        nextRhs = rhs;
+        lhsChanged = false;
+      }
+    }
+    eventPrefixes = [];
+    eventPrefixes.push([sthType, '*'].join(':'));
+    eventPrefixes.push([sthType, lhs.id].join(':'));
+    if ((lhs.name != null)) eventPrefixes.push([sthType, lhs.name].join(':'));
+    if (lhsChanged) {
+      _results = [];
+      for (_j = 0, _len2 = eventPrefixes.length; _j < _len2; _j++) {
+        e = eventPrefixes[_j];
+        this._emit([e, changeType].join(':'), lhs);
+        _results.push((function() {
+          var _k, _len3, _results2;
+          _results2 = [];
+          for (_k = 0, _len3 = parentIds.length; _k < _len3; _k++) {
+            p = parentIds[_k];
+            _results2.push(this._emit([p, e, changeType].join(':'), lhs));
+          }
+          return _results2;
+        }).call(this));
+      }
+      return _results;
+    } else {
+      return next.call(this, lhs, nextRhs, eventPrefixes.slice(1));
+    }
   };
 
   return Monitor;
