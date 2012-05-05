@@ -8,11 +8,11 @@ class Comparator
     @comparator.changeType = 'change'
 
     @comparator.missingType = 'removed'
-    @comparator.compareLeaves = true
+    @comparator.compareLeaves = false
     @comparePools leftResult, rightResult
 
     @comparator.missingType = 'added'
-    @comparator.compareLeaves = false
+    @comparator.compareLeaves = true
     @comparePools rightResult, leftResult
 
   comparePools: (lhsPools, rhsPools) ->

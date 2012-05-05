@@ -14,10 +14,10 @@ Comparator = (function() {
     this.comparator = new GenericComparator(this.monitor, this);
     this.comparator.changeType = 'change';
     this.comparator.missingType = 'removed';
-    this.comparator.compareLeaves = true;
+    this.comparator.compareLeaves = false;
     this.comparePools(leftResult, rightResult);
     this.comparator.missingType = 'added';
-    this.comparator.compareLeaves = false;
+    this.comparator.compareLeaves = true;
     return this.comparePools(rightResult, leftResult);
   };
 
