@@ -83,7 +83,6 @@ class Query extends events.EventEmitter
       if code == 0
         self.zfs = null
         cb()
-      else self.query()
 
   parseFilesystems: (cb) ->
     lines = @zfsStatusOutput.split "\n"
