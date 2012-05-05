@@ -24,6 +24,7 @@ Monitor = (function(_super) {
   Monitor.prototype.startMonitoring = function() {
     var self;
     if (this.interval !== 0) return;
+    console.log('zfs-monitor: starting');
     this.query.execute();
     self = this;
     return this.interval = setInterval(function() {
@@ -33,8 +34,10 @@ Monitor = (function(_super) {
 
   Monitor.prototype.stopMonitoring = function() {
     if (this.interval === 0) return;
+    console.log('zfs-monitor: stopping');
     clearInterval(this.interval);
-    return this.interval = 0;
+    this.interval = 0;
+    return this.lastStatus = null;
   };
 
   Monitor.prototype.getSnapshot = function() {
