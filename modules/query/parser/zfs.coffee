@@ -34,7 +34,7 @@ class ZfsAnalyser
 
       if name == poolName
         @pool.size = normalizeBytes(used) + normalizeBytes(available)
-        continue
+        continue unless lines.length is 1
 
       fsSize = normalizeBytes referenced
       @pool.allocated += fsSize
