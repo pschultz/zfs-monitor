@@ -18,7 +18,7 @@ class ZPool
     @filesystems.push fs
 
   equals: (rhs) ->
-    this.size == rhs.size and this.allocated == rhs.allocated
+    this.size == rhs.size and this.allocated == rhs.allocated and this.status == rhs.status
 
 
 module.exports = exports = ZPool

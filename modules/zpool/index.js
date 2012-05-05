@@ -26,7 +26,7 @@ ZPool = (function() {
   };
 
   ZPool.prototype.equals = function(rhs) {
-    return this.size === rhs.size && this.allocated === rhs.allocated;
+    return this.size === rhs.size && this.allocated === rhs.allocated && this.status === rhs.status;
   };
 
   return ZPool;
