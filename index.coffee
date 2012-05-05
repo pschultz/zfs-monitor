@@ -13,8 +13,8 @@ class Monitor extends events.EventEmitter
 
   startMonitoring: ->
     return unless @interval is 0
+    @emit 'monitor:start'
 
-    console.log 'zfs-monitor: starting'
     @query.execute()
 
     self = @
@@ -24,7 +24,8 @@ class Monitor extends events.EventEmitter
 
   stopMonitoring: ->
     return if @interval is 0
-    console.log 'zfs-monitor: stopping'
+    @emit 'monitor:stop'
+
     clearInterval @interval
     @interval = 0
     @lastStatus = null
