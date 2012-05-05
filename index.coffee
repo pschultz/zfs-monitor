@@ -20,7 +20,7 @@ class Monitor extends events.EventEmitter
     self = @
     @interval = setInterval ->
       self.query.execute()
-    , 2000
+    , 5000
 
   stopMonitoring: ->
     return if @interval is 0
