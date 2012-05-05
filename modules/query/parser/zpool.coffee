@@ -1,6 +1,6 @@
 poolStatusPattern = /^ state: (\S+)/
 poolScanPattern   = /^  scan: (resilver|scrub) in progress/
-diskArrayStartPattern = /^        NAME/
+diskArrayStartPattern = /^\s+NAME/
 
 Scan = require '../../zpool/scan'
 Disk = require '../../zpool/disk'
@@ -56,7 +56,7 @@ class PoolParser
     return i
 
   parseDiskarrays: (lines, i) ->
-    linePattern = /^ +(\S+) *(\S+)?/
+    linePattern = /^\s+(\S+)\s*(\S+)?/
     specialDeviceNamePattern = /^((raidz\d|mirror|logs|spares|cache)\S*)/
 
     lastIndentLevel = Infinity
@@ -66,7 +66,8 @@ class PoolParser
       line = lines[i]
       break if line.match /^\s*$/
 
-      [ leadingSpaces ] = /^ +/.exec line
+
+      [ leadingSpaces ] = /^\s+/.exec line
       indentLevel = leadingSpaces.length
 
       [ nil, deviceName, deviceStatus ] = linePattern.exec line
